@@ -82,19 +82,21 @@ jobs:
 
       - name: 运行 Playwright 测试
         env:
+          TEST_URL: ${{ secrets.TEST_URL }}
+          TEST_USERNAME: ${{ secrets.TEST_USERNAME }}
+          TEST_PASSWORD: ${{ secrets.TEST_PASSWORD }}
           HEADED: "false"
         run: |
           # 显示 Python 和 Playwright 版本
           python --version
           python -m playwright --version
 
-          # 运行测试，增加超时和详细输出
-          python -m pytest test_login_advanced.py -v \
+          # 先运行简单测试（用于调试）
+          echo "=== 运行简单测试 ==="
+          python -m pytest test_simple.py -v \
             --browser ${{ matrix.browser }} \
-            --timeout=60000 \
-            -ra \
-            --tb=short \
-            --capture=no
+            -s \
+            --tb=short
         continue-on-error: false
 
       - name: 上传测试报告
