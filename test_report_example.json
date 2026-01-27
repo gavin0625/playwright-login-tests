@@ -1,0 +1,158 @@
+{
+  "report_info": {
+    "title": "登录功能自动化测试报告",
+    "generated_at": "2025-01-27T18:30:00.000000",
+    "framework": "Playwright + Pytest",
+    "version": "1.0.0"
+  },
+  "summary": {
+    "total_test_cases": 4,
+    "passed": 4,
+    "failed": 0,
+    "skipped": 0,
+    "pass_rate": 100.0
+  },
+  "test_execution": {
+    "start_time": "2025-01-27T18:29:50.000000",
+    "end_time": "2025-01-27T18:30:00.000000"
+  },
+  "test_cases": [
+    {
+      "test_case_id": "TC001",
+      "test_case_name": "使用有效凭证登录",
+      "description": "验证使用正确的用户名和密码能够成功登录系统",
+      "priority": "P0",
+      "tags": [
+        "smoke",
+        "login",
+        "positive"
+      ],
+      "precondition": "系统正常运行，登录页面可访问",
+      "test_data": {
+        "username": "admin",
+        "password": "admin123!"
+      },
+      "steps": [
+        {
+          "step_number": 1,
+          "action": "导航到登录页面",
+          "input": "URL: http://localhost",
+          "expected": "登录页面成功加载",
+          "status": "passed",
+          "timestamp": "2025-01-27T18:29:51.000000"
+        },
+        {
+          "step_number": 2,
+          "action": "在用户名字段输入用户名",
+          "input": "用户名: admin",
+          "locator": "#edit-name",
+          "expected": "用户名成功填入",
+          "status": "passed",
+          "timestamp": "2025-01-27T18:29:52.000000"
+        },
+        {
+          "step_number": 3,
+          "action": "在密码字段输入密码",
+          "input": "密码: ******",
+          "locator": "#edit-pass--2",
+          "expected": "密码成功填入",
+          "status": "passed",
+          "timestamp": "2025-01-27T18:29:53.000000"
+        },
+        {
+          "step_number": 4,
+          "action": "点击登录按钮",
+          "input": "点击 #edit-submit",
+          "locator": "#edit-submit",
+          "expected": "提交登录表单",
+          "status": "passed",
+          "timestamp": "2025-01-27T18:29:54.000000"
+        },
+        {
+          "step_number": 5,
+          "action": "等待并验证登录结果",
+          "input": "等待页面响应",
+          "expected": "成功登录，显示用户界面或重定向",
+          "status": "passed",
+          "timestamp": "2025-01-27T18:29:56.000000"
+        }
+      ],
+      "expected_result": "用户成功登录，跳转到主页面",
+      "actual_result": "用户成功登录系统",
+      "status": "passed",
+      "duration": "2.500s",
+      "timestamp": "2025-01-27T18:29:51.000000",
+      "error": null,
+      "screenshots": []
+    },
+    {
+      "test_case_id": "TC002",
+      "test_case_name": "使用无效用户名登录",
+      "description": "验证使用错误的用户名无法登录系统",
+      "priority": "P1",
+      "tags": [
+        "regression",
+        "login",
+        "negative"
+      ],
+      "precondition": "系统正常运行",
+      "test_data": {
+        "username": "invalid_user",
+        "password": "admin123!"
+      },
+      "steps": [],
+      "expected_result": "显示错误提示信息",
+      "actual_result": "正确显示错误信息",
+      "status": "passed",
+      "duration": "1.200s",
+      "timestamp": "2025-01-27T18:29:57.000000",
+      "error": null
+    },
+    {
+      "test_case_id": "TC003",
+      "test_case_name": "使用无效密码登录",
+      "description": "验证使用错误的密码无法登录系统",
+      "priority": "P1",
+      "tags": [
+        "regression",
+        "login",
+        "negative"
+      ],
+      "precondition": "系统正常运行",
+      "test_data": {
+        "username": "admin",
+        "password": "wrongpassword"
+      },
+      "steps": [],
+      "expected_result": "显示错误提示信息",
+      "actual_result": "正确显示错误信息",
+      "status": "passed",
+      "duration": "1.150s",
+      "timestamp": "2025-01-27T18:29:58.000000",
+      "error": null
+    },
+    {
+      "test_case_id": "TC004",
+      "test_case_name": "使用空字段登录",
+      "description": "验证不填写任何信息时无法提交登录表单",
+      "priority": "P1",
+      "tags": [
+        "regression",
+        "login",
+        "negative"
+      ],
+      "precondition": "系统正常运行",
+      "test_data": {
+        "username": "",
+        "password": ""
+      },
+      "steps": [],
+      "expected_result": "显示必填字段提示或阻止提交",
+      "actual_result": "正确处理空字段提交",
+      "status": "passed",
+      "duration": "0.800s",
+      "timestamp": "2025-01-27T18:29:59.000000",
+      "error": null
+    }
+  ]
+}

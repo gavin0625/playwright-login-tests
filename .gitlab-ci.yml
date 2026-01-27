@@ -1,0 +1,185 @@
+# GitLab CI/CD 配置文件
+# Playwright 自动化测试流水线
+
+stages:
+  - test
+  - report
+  - notify
+
+variables:
+  # Playwright 配置
+  PLAYWRIGHT_BROWSERS_PATH: /ms-playwright
+  PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
+
+# 缓存配置
+cache:
+  key: ${CI_COMMIT_REF_SLUG}
+  paths:
+    - .cache/pip
+    - venv/
+    - .pytest_cache/
+
+# 安装依赖并运行测试
+test:chromium:
+  stage: test
+  image: python:3.9
+  allow_failure: false
+  script:
+    # 安装系统依赖
+    - apt-get update && apt-get install -y
+        libnss3
+        libnspr4
+        libatk1.0-0
+        libatk-bridge2.0-0
+        libcups2
+        libdrm2
+        libxkbcommon0
+        libxcomposite1
+        libxdamage1
+        libxfixes3
+        libxrandr2
+        libgbm1
+        libasound2
+
+    # 安装 Python 依赖
+    - python -m pip install --upgrade pip
+    - pip install -r requirements.txt
+
+    # 安装 Playwright 浏览器
+    - python -m playwright install --with-deps chromium
+
+    # 设置测试环境变量（从 GitLab CI/CD Variables 获取）
+    - |
+      if [ -n "$TEST_URL" ]; then
+        sed -i "s|BASE_URL = \".*\"|BASE_URL = \"$TEST_URL\"|g" test_login_advanced.py
+      fi
+      if [ -n "$TEST_USERNAME" ]; then
+        sed -i "s/USERNAME = \".*\"/USERNAME = \"$TEST_USERNAME\"/g" test_login_advanced.py
+      fi
+      if [ -n "$TEST_PASSWORD" ]; then
+        sed -i "s/PASSWORD = \".*\"/PASSWORD = \"$TEST_PASSWORD\"/g" test_login_advanced.py
+      fi
+
+    # 运行测试
+    - python -m pytest test_login_advanced.py -v --browser chromium
+
+  artifacts:
+    when: always
+    paths:
+      - test_report.json
+      - screenshots/
+      - test-results/
+    expire_in: 30 days
+    reports:
+      # 如果使用 JUnit 格式报告
+      junit: test-results/*.xml
+  only:
+    - main
+    - develop
+    - merge_requests
+  tags:
+    - docker
+
+# Firefox 浏览器测试（可选）
+test:firefox:
+  stage: test
+  image: python:3.9
+  allow_failure: true
+  script:
+    - apt-get update && apt-get install -y libnss3 libnspr4 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 libxkbcommon0 libxcomposite1 libxdamage1 libxfixes3 libxrandr2 libgbm1 libasound2
+    - python -m pip install --upgrade pip
+    - pip install -r requirements.txt
+    - python -m playwright install --with-deps firefox
+    - python -m pytest test_login_advanced.py -v --browser firefox
+  artifacts:
+    when: always
+    paths:
+      - test_report.json
+    expire_in: 30 days
+  only:
+    - main
+    - schedules
+
+# 并行测试（可选）
+test:parallel:
+  stage: test
+  image: python:3.9
+  script:
+    - apt-get update && apt-get install -y libnss3 libnspr4 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 libxkbcommon0 libxcomposite1 libxdamage1 libxfixes3 libxrandr2 libgbm1 libasound2
+    - python -m pip install --upgrade pip
+    - pip install -r requirements.txt
+    - pip install pytest-xdist
+    - python -m playwright install --with-deps chromium
+    - python -m pytest test_login_advanced.py -v -n auto --browser chromium
+  artifacts:
+    when: always
+    paths:
+      - test_report.json
+    expire_in: 30 days
+  only:
+    - main
+
+# 生成测试报告
+test:report:
+  stage: report
+  image: python:3.9
+  script:
+    - pip install json2html
+    - python -c "import json; from json2html import json2html; data = json.load(open('test_report.json')); open('test_report.html', 'w').write(json2html.convert(json=data))"
+  artifacts:
+    when: always
+    paths:
+      - test_report.html
+    expire_in: 30 days
+  dependencies:
+    - test:chromium
+  only:
+    - main
+    - develop
+
+# 发送通知（可选）
+notify:slack:
+  stage: notify
+  image: alpine:latest
+  script:
+    - apk add --no-cache curl
+    - |
+      curl -X POST $SLACK_WEBHOOK_URL \
+        -H 'Content-Type: application/json' \
+        -d '{
+          "text": "Playwright 测试完成 - '"$CI_PIPELINE_STATUS"'",
+          "blocks": [
+            {
+              "type": "section",
+              "text": {
+                "type": "mrkdwn",
+                "text": "*Playwright 测试结果*\n*状态:* '"$CI_PIPELINE_STATUS"'\n*分支:* '"$CI_COMMIT_REF_NAME"'\n*提交:* '"$CI_COMMIT_SHORT_SHA"'"
+              }
+            }
+          ]
+        }'
+  when: always
+  only:
+    - main
+    - develop
+  dependencies:
+    - test:chromium
+
+# 定时任务（每天凌晨2点运行）
+test:schedule:
+  stage: test
+  image: python:3.9
+  script:
+    - apt-get update && apt-get install -y libnss3 libnspr4 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 libxkbcommon0 libxcomposite1 libxdamage1 libxfixes3 libxrandr2 libgbm1 libasound2
+    - python -m pip install --upgrade pip
+    - pip install -r requirements.txt
+    - python -m playwright install --with-deps chromium
+    - python -m pytest test_login_advanced.py -v --browser chromium
+  artifacts:
+    when: always
+    paths:
+      - test_report.json
+      - screenshots/
+    expire_in: 30 days
+  only:
+    - schedules

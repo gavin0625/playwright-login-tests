@@ -1,0 +1,151 @@
+name: Playwright 自动化测试
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  schedule:
+    # 每天凌晨2点运行
+    - cron: '0 2 * * *'
+  workflow_dispatch:  # 允许手动触发
+
+jobs:
+  test:
+    timeout-minutes: 60
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # 可以并行测试多个浏览器
+        browser: [chromium]
+        # browser: [chromium, firefox, webkit]
+
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 设置 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.9'
+          cache: 'pip'
+
+      - name: 安装系统依赖
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libnss3 \
+            libnspr4 \
+            libatk1.0-0 \
+            libatk-bridge2.0-0 \
+            libcups2 \
+            libdrm2 \
+            libxkbcommon0 \
+            libxcomposite1 \
+            libxdamage1 \
+            libxfixes3 \
+            libxrandr2 \
+            libgbm1 \
+            libasound2
+
+      - name: 安装 Python 依赖
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: 安装 Playwright 浏览器
+        run: python -m playwright install --with-deps ${{ matrix.browser }}
+
+      - name: 设置测试环境变量
+        env:
+          TEST_URL: ${{ secrets.TEST_URL }}
+          TEST_USERNAME: ${{ secrets.TEST_USERNAME }}
+          TEST_PASSWORD: ${{ secrets.TEST_PASSWORD }}
+        run: |
+          # 如果有 GitHub Secrets，则使用它们
+          if [ -n "$TEST_URL" ]; then
+            sed -i "s|BASE_URL = \".*\"|BASE_URL = \"$TEST_URL\"|g" test_login_advanced.py
+          fi
+          if [ -n "$TEST_USERNAME" ]; then
+            sed -i "s/USERNAME = \".*\"/USERNAME = \"$TEST_USERNAME\"/g" test_login_advanced.py
+          fi
+          if [ -n "$TEST_PASSWORD" ]; then
+            sed -i "s/PASSWORD = \".*\"/PASSWORD = \"$TEST_PASSWORD\"/g" test_login_advanced.py
+          fi
+
+      - name: 运行 Playwright 测试
+        run: python -m pytest test_login_advanced.py -v --browser ${{ matrix.browser }}
+        continue-on-error: false
+
+      - name: 上传测试报告
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-report-${{ matrix.browser }}
+          path: |
+            test_report.json
+            test-results/
+            screenshots/
+          retention-days: 30
+
+      - name: 上传失败截图
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: failure-screenshots-${{ matrix.browser }}
+          path: screenshots/
+          retention-days: 30
+
+      - name: 发送测试结果到 Slack (可选)
+        if: always()
+        uses: slackapi/slack-github-action@v1.25.0
+        with:
+          payload: |
+            {
+              "text": "Playwright 测试完成 - ${{ job.status }}",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*Playwright 测试结果*\n*状态:* ${{ job.status }}\n*分支:* ${{ github.ref }}\n*提交:* ${{ github.sha }}"
+                  }
+                }
+              ]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+  # 并行运行测试以加快速度（可选）
+  test-parallel:
+    timeout-minutes: 60
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event_name == 'schedule'
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 设置 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.9'
+
+      - name: 安装依赖
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          python -m playwright install --with-deps chromium
+
+      - name: 并行运行测试
+        run: |
+          # 使用 pytest-xdist 并行运行
+          pip install pytest-xdist
+          python -m pytest test_login_advanced.py -v -n auto --browser chromium
+
+      - name: 上传测试报告
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: parallel-test-report
+          path: test_report.json

@@ -1,0 +1,94 @@
+version: '3.8'
+
+services:
+  # Playwright 测试服务
+  playwright-test:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: playwright-tests
+    environment:
+      # 测试环境变量
+      - TEST_URL=${TEST_URL:-https://alliance-lms.dev.i2hk.net/}
+      - TEST_USERNAME=${TEST_USERNAME:-admin}
+      - TEST_PASSWORD=${TEST_PASSWORD:-admin123!}
+      - TEST_ENV=${TEST_ENV:-test}
+      - HEADLESS=${HEADLESS:-true}
+      - BROWSER=${BROWSER:-chromium}
+    volumes:
+      # 挂载测试报告目录
+      - ./test-report:/app/test-report
+      - ./screenshots:/app/screenshots
+      - ./test-results:/app/test-results
+    command: >
+      sh -c "
+        # 更新测试配置
+        if [ -n '$$TEST_URL' ]; then
+          sed -i 's|BASE_URL = \".*\"|BASE_URL = \"$$TEST_URL\"|g' test_login_advanced.py
+        fi
+        if [ -n '$$TEST_USERNAME' ]; then
+          sed -i 's/USERNAME = \".*\"/USERNAME = \"$$TEST_USERNAME\"/g' test_login_advanced.py
+        fi
+        if [ -n '$$TEST_PASSWORD' ]; then
+          sed -i 's/PASSWORD = \".*\"|PASSWORD = \"$$TEST_PASSWORD\"/g' test_login_advanced.py
+        fi
+        # 运行测试
+        python -m pytest test_login_advanced.py \
+          -v \
+          --browser $$BROWSER \
+          --html=/app/test-report/report.html \
+          --self-contained-html
+      "
+    networks:
+      - test-network
+
+  # Allure 报告服务（可选）
+  allure-report:
+    image: frankescobar/allure-docker-service:latest
+    container_name: allure-reports
+    environment:
+      - CHECK_RESULTS_EVERY_SECONDS=3
+      - KEEP_HISTORY=1
+    ports:
+      - "5050:5050"
+    volumes:
+      - ./allure-results:/app/allure-results
+      - ./allure-reports:/app/allure-reports
+    networks:
+      - test-network
+
+  # Nginx 报告服务器（可选）
+  report-server:
+    image: nginx:alpine
+    container_name: test-report-server
+    ports:
+      - "8080:80"
+    volumes:
+      - ./test-report:/usr/share/nginx/html
+      - ./screenshots:/usr/share/nginx/html/screenshots
+    networks:
+      - test-network
+
+networks:
+  test-network:
+    driver: bridge
+
+# 使用说明:
+#
+# 1. 创建 .env 文件:
+#    TEST_URL=https://alliance-lms.dev.i2hk.net/
+#    TEST_USERNAME=admin
+#    TEST_PASSWORD=admin123!
+#
+# 2. 构建并运行:
+#    docker-compose up --build
+#
+# 3. 只运行测试（不启动报告服务）:
+#    docker-compose run --rm playwright-test
+#
+# 4. 查看测试报告:
+#    - Allure: http://localhost:5050
+#    - Nginx: http://localhost:8080
+#
+# 5. 清理:
+#    docker-compose down -v
