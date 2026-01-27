@@ -63,19 +63,38 @@ jobs:
           TEST_USERNAME: ${{ secrets.TEST_USERNAME }}
           TEST_PASSWORD: ${{ secrets.TEST_PASSWORD }}
         run: |
-          # 如果有 GitHub Secrets，则使用它们
+          # 如果有 GitHub Secrets，则使用它们（Linux sed 语法）
           if [ -n "$TEST_URL" ]; then
             sed -i "s|BASE_URL = \".*\"|BASE_URL = \"$TEST_URL\"|g" test_login_advanced.py
+            echo "已设置 BASE_URL=$TEST_URL"
           fi
           if [ -n "$TEST_USERNAME" ]; then
             sed -i "s/USERNAME = \".*\"/USERNAME = \"$TEST_USERNAME\"/g" test_login_advanced.py
+            echo "已设置 USERNAME=$TEST_USERNAME"
           fi
           if [ -n "$TEST_PASSWORD" ]; then
             sed -i "s/PASSWORD = \".*\"/PASSWORD = \"$TEST_PASSWORD\"/g" test_login_advanced.py
+            echo "已设置 PASSWORD=***"
           fi
+          # 显示配置（隐藏密码）
+          echo "=== 测试配置 ==="
+          grep "BASE_URL\|USERNAME\|PASSWORD" test_login_advanced.py | head -3
 
       - name: 运行 Playwright 测试
-        run: python -m pytest test_login_advanced.py -v --browser ${{ matrix.browser }}
+        env:
+          HEADED: "false"
+        run: |
+          # 显示 Python 和 Playwright 版本
+          python --version
+          python -m playwright --version
+
+          # 运行测试，增加超时和详细输出
+          python -m pytest test_login_advanced.py -v \
+            --browser ${{ matrix.browser }} \
+            --timeout=60000 \
+            -ra \
+            --tb=short \
+            --capture=no
         continue-on-error: false
 
       - name: 上传测试报告
