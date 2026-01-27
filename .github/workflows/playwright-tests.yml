@@ -97,26 +97,27 @@ jobs:
           path: screenshots/
           retention-days: 30
 
-      - name: 发送测试结果到 Slack (可选)
-        if: always()
-        continue-on-error: true
-        uses: slackapi/slack-github-action@v1.25.0
-        with:
-          payload: |
-            {
-              "text": "Playwright 测试完成 - ${{ job.status }}",
-              "blocks": [
-                {
-                  "type": "section",
-                  "text": {
-                    "type": "mrkdwn",
-                    "text": "*Playwright 测试结果*\n*状态:* ${{ job.status }}\n*分支:* ${{ github.ref }}\n*提交:* ${{ github.sha }}"
-                  }
-                }
-              ]
-            }
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+      # Slack 通知已禁用（如需启用请配置 SLACK_WEBHOOK_URL secret 并取消注释）
+      # - name: 发送测试结果到 Slack (可选)
+      #   if: always()
+      #   continue-on-error: true
+      #   uses: slackapi/slack-github-action@v1.25.0
+      #   with:
+      #     payload: |
+      #       {
+      #         "text": "Playwright 测试完成 - ${{ job.status }}",
+      #         "blocks": [
+      #           {
+      #             "type": "section",
+      #             "text": {
+      #               "type": "mrkdwn",
+      #               "text": "*Playwright 测试结果*\n*状态:* ${{ job.status }}\n*分支:* ${{ github.ref }}\n*提交:* ${{ github.sha }}"
+      #             }
+      #           }
+      #         ]
+      #       }
+      #   env:
+      #     SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
 
   # 并行运行测试以加快速度（可选）
   test-parallel:
