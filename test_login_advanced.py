@@ -19,7 +19,7 @@ class TestLoginAdvanced:
     BASE_URL = "https://alliance-lms.dev.i2hk.net/"  # 测试网站地址
     USERNAME = "admin"
     PASSWORD = "admin123!"
-    TIMEOUT = 30000  # 30秒超时
+    TIMEOUT = 60000  # 60秒超时 (CI 环境需要更长时间)
 
     @pytest.mark.smoke
     @pytest.mark.login
@@ -69,7 +69,9 @@ class TestLoginAdvanced:
                 "status": "passed",
                 "timestamp": datetime.now().isoformat()
             }
-            page.goto(self.BASE_URL, timeout=self.TIMEOUT)
+            page.goto(self.BASE_URL, timeout=self.TIMEOUT, wait_until="networkidle")
+            # 等待页面完全加载
+            page.wait_for_load_state("networkidle", timeout=self.TIMEOUT)
             test_case["steps"].append(step)
 
             # 步骤2: 输入用户名
@@ -82,6 +84,8 @@ class TestLoginAdvanced:
                 "status": "passed",
                 "timestamp": datetime.now().isoformat()
             }
+            # 等待用户名输入框可见
+            page.wait_for_selector("#edit-name", timeout=self.TIMEOUT, state="visible")
             page.locator("#edit-name").fill(self.USERNAME)
             test_case["steps"].append(step)
 
@@ -95,6 +99,8 @@ class TestLoginAdvanced:
                 "status": "passed",
                 "timestamp": datetime.now().isoformat()
             }
+            # 等待密码输入框可见
+            page.wait_for_selector("#edit-pass--2", timeout=self.TIMEOUT, state="visible")
             page.locator("#edit-pass--2").fill(self.PASSWORD)
             test_case["steps"].append(step)
 
@@ -108,6 +114,8 @@ class TestLoginAdvanced:
                 "status": "passed",
                 "timestamp": datetime.now().isoformat()
             }
+            # 等待提交按钮可见并点击
+            page.wait_for_selector("#edit-submit", timeout=self.TIMEOUT, state="visible")
             page.locator("#edit-submit").click()
             test_case["steps"].append(step)
 
