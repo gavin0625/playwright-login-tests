@@ -98,7 +98,7 @@ jobs:
           retention-days: 30
 
       - name: 发送测试结果到 Slack (可选)
-        if: always()
+        if: always() && secrets.SLACK_WEBHOOK_URL != ''
         uses: slackapi/slack-github-action@v1.25.0
         with:
           payload: |
