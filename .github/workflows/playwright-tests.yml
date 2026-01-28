@@ -25,5 +25,3 @@ jobs:
       
       - name: Run tests
         run: python -m pytest test_simple.py -v -s --tb=long || echo "Exit code: \$?"
-
-      - name: Show script content  # 已新增 Secrets
