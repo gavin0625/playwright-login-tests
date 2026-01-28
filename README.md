@@ -281,6 +281,8 @@ pip install pytest-rerunfailures
 pytest --reruns 3 test_login_advanced.py
 ```
 
+Test CI/CD pipeline
+
 ## 最佳实践
 
 1. **使用 Page Object Model**: 对于大型项目，建议使用 POM 设计模式
